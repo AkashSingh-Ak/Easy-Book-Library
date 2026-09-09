@@ -1,0 +1,197 @@
+<!-- app/templates/reader.html -->
+{% extends "base.html" %}
+
+{% block title %}{{ book.title }} - Reader{% endblock %}
+
+{% block content %}
+<div class="reader-container">
+    <!-- Left Sidebar: Controls & Navigation -->
+    <aside class="reader-sidebar">
+        <div class="sidebar-tabs">
+            <button class="tab-btn active" onclick="switchTab('toc')">Contents</button>
+            <button class="tab-btn" onclick="switchTab('bookmarks')">Bookmarks</button>
+            <button class="tab-btn" onclick="switchTab('tts')">Read Aloud</button>
+            <button class="tab-btn" onclick="switchTab('search')">Search</button>
+        </div>
+
+        <!-- Contents Tab -->
+        <div id="tab-toc" class="tab-content active">
+            <h4 style="margin-bottom: 0.5rem;">Table of Contents</h4>
+            <div id="toc-list" style="flex: 1; overflow-y: auto;">
+                <!-- Populate chapters dynamically -->
+            </div>
+        </div>
+
+        <!-- Bookmarks & Notes Tab -->
+        <div id="tab-bookmarks" class="tab-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <h4>Bookmarks & Highlights</h4>
+                <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="addCurrentBookmark()">+ Bookmark</button>
+            </div>
+            
+            <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem;">
+                <div id="bookmarks-list">
+                    <!-- Populated dynamically -->
+                </div>
+                <hr style="border: 0; border-top: 1px solid var(--border-color);">
+                <h5>Saved Notes</h5>
+                <div id="highlights-list">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Text-to-Speech Controls Tab -->
+        <div id="tab-tts" class="tab-content">
+            <h4>Voice Settings</h4>
+            
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; background: rgba(0,0,0,0.1); padding: 1rem; border-radius: var(--radius-sm);">
+                <!-- Playback Controllers -->
+                <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                    <button class="btn btn-secondary" onclick="ttsPrevSentence()" title="Previous Sentence">⏮️</button>
+                    <button id="tts-play-btn" class="btn btn-primary" onclick="toggleTtsPlay()">▶️ Play</button>
+                    <button class="btn btn-secondary" onclick="stopTts()" title="Stop">⏹️</button>
+                    <button class="btn btn-secondary" onclick="ttsNextSentence()" title="Next Sentence">⏭️</button>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; justify-content: center;">
+                    <input type="checkbox" id="tts-autoscroll" checked onchange="saveTtsPreferences()">
+                    <label for="tts-autoscroll">Auto-scroll document during speech</label>
+                </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <label for="tts-voice-select" style="font-size: 0.85rem; font-weight: 500;">Select local voice:</label>
+                    <select id="tts-voice-select" class="filter-select" style="width: 100%;" onchange="saveTtsPreferences()">
+                        <!-- Loaded from system -->
+                    </select>
+                </div>
+
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                        <label>Speech rate:</label>
+                        <span id="rate-val">1.0x</span>
+                    </div>
+                    <input type="range" id="tts-rate" min="0.5" max="2.5" step="0.1" value="1.0" style="width: 100%;" oninput="document.getElementById('rate-val').innerText = this.value + 'x'" onchange="saveTtsPreferences()">
+                </div>
+
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                        <label>Pitch:</label>
+                        <span id="pitch-val">1.0</span>
+                    </div>
+                    <input type="range" id="tts-pitch" min="0.5" max="1.8" step="0.1" value="1.0" style="width: 100%;" oninput="document.getElementById('pitch-val').innerText = this.value" onchange="saveTtsPreferences()">
+                </div>
+
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.25rem;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                        <label>Volume:</label>
+                        <span id="volume-val">100%</span>
+                    </div>
+                    <input type="range" id="tts-volume" min="0.0" max="1.0" step="0.1" value="1.0" style="width: 100%;" oninput="document.getElementById('volume-val').innerText = Math.round(this.value * 100) + '%'" onchange="saveTtsPreferences()">
+                </div>
+            </div>
+        </div>
+
+        <!-- Inside-Book Search Tab -->
+        <div id="tab-search" class="tab-content">
+            <h4>Search Inside Book</h4>
+            <div class="search-input-group" style="min-width: unset; margin-bottom: 0.75rem;">
+                <input type="text" id="book-search-input" placeholder="Type keyword..." onkeyup="if(event.key === 'Enter') searchInsideBook()">
+                <button class="btn btn-primary" style="padding: 0.25rem 0.5rem;" onclick="searchInsideBook()">Go</button>
+            </div>
+            
+            <div id="search-results-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Reader Panel -->
+    <main class="reader-main">
+        <!-- Top Toolbar -->
+        <div class="reader-toolbar">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="btn btn-secondary" onclick="window.location.href='/'">
+                    ← Back
+                </button>
+                <h3 id="book-title-header" style="font-size: 1.1rem; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ book.title }}</h3>
+            </div>
+            
+            <!-- Navigation -->
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <button class="btn btn-secondary" style="padding: 0.35rem 0.65rem;" onclick="prevPage()">◀</button>
+                <div style="font-size: 0.95rem; font-weight: 500;">
+                    Page / Chapter <input type="number" id="page-input" value="1" min="1" max="{{ book.total_pages or 1 }}" style="width: 50px; text-align: center; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); outline: none; border-radius: var(--radius-sm);" onchange="jumpToPage(this.value)"> of <span id="total-pages-span">{{ book.total_pages or '?' }}</span>
+                </div>
+                <button class="btn btn-secondary" style="padding: 0.35rem 0.65rem;" onclick="nextPage()">▶</button>
+            </div>
+
+            <!-- Page scale adjustment -->
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <button class="btn btn-secondary" style="padding: 0.35rem; font-size: 0.8rem;" onclick="adjustFont(-1)" title="Smaller Text">A-</button>
+                <button class="btn btn-secondary" style="padding: 0.35rem; font-size: 0.8rem;" onclick="adjustFont(1)" title="Larger Text">A+</button>
+                <button class="btn btn-secondary" style="padding: 0.35rem; font-size: 0.8rem;" onclick="toggleFullscreen()" title="Fullscreen">⛶</button>
+            </div>
+        </div>
+
+        <!-- Render Canvas -->
+        <div id="reader-canvas" class="reader-canvas-container">
+            <div id="document-renderer" class="document-renderer">
+                <!-- Renders SVGs or EPUB chapters -->
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Floating Dictionary Modal card -->
+<div id="dict-popup" class="dictionary-popup">
+    <div class="dict-popup-header">
+        <span id="dict-word" class="dict-word">unbelievable</span>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <span id="dict-cefr" class="dict-cefr">B2</span>
+            <button onclick="closeDictionaryPopup()" style="background: none; border: none; font-weight: 700; color: var(--text-muted); cursor: pointer;">✕</button>
+        </div>
+    </div>
+    <div id="dict-word-hindi" style="font-size: 1rem; color: var(--accent-color); margin-top: -0.25rem; margin-bottom: 0.25rem; font-weight: 500; display: none;"></div>
+    <span id="dict-ipa" class="dict-ipa">/ˌʌnbɪˈliːvəbl/</span>
+    <span id="dict-pos" style="font-size: 0.8rem; font-style: italic; color: var(--text-muted);">adjective</span>
+    
+    <div style="max-height: 120px; overflow-y: auto; margin: 0.25rem 0;">
+        <p id="dict-meaning" class="dict-meaning">Too improbable to be believed; difficult to believe.</p>
+    </div>
+    
+    <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 0.5rem;">
+        <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;" id="tts-word-btn" onclick="speakCurrentWord()">🔊 Pronounce</button>
+        <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;" id="read-from-here-btn" onclick="window.readFromHere()">▶ Read from here</button>
+        <button class="btn btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;" id="save-word-btn" onclick="openVocabularyDeckDetails()">🔎 Full Analysis</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const bookId = "{{ book.id }}";
+    const bookType = "{{ book.file_type }}";
+    let currentPage = 1;
+    let totalPages = {{ book.total_pages or 1 }};
+</script>
+<script src="/static/js/reader.js"></script>
+<script src="/static/js/tts.js"></script>
+<script src="/static/js/vocab.js?v=2"></script>
+<script>
+    // Init page load
+    document.addEventListener("DOMContentLoaded", () => {
+        initReader();
+        initTtsEngine();
+        initWordSelectionPopup();
+
+        // Append book_id to the Vocabulary Deck nav button so that clicking it preserves the book state
+        const vocabNavBtn = document.querySelector('a[href="/vocabulary"]');
+        if (vocabNavBtn && typeof bookId !== 'undefined' && bookId) {
+            vocabNavBtn.href = `/vocabulary?book_id=${encodeURIComponent(bookId)}`;
+        }
+    });
+</script>
+{% endblock %}

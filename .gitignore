@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local runtime data (books, generated covers, database, logs)
+app/static/books/*
+!app/static/books/.gitkeep
+app/static/covers/*
+!app/static/covers/.gitkeep
+!app/static/covers/default_cover.png
+app/database/*.db
+app/database/*.db-shm
+app/database/*.db-wal
+server.log
+
+# Test / tool caches
+.pytest_cache/
+.env

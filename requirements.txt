@@ -1,0 +1,28 @@
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+jinja2==3.1.5
+
+# Settings & data validation
+pydantic==2.10.4
+pydantic-settings==2.7.1
+
+# Database
+sqlalchemy==2.0.36
+
+# Book parsing & rendering (PDF + EPUB)
+PyMuPDF==1.25.1
+ebooklib==0.18
+lxml==5.3.0
+
+# Vocabulary / dictionary analysis
+nltk==3.9.1
+# ety still imports the deprecated pkg_resources module, which newer
+# setuptools releases no longer ship - pin below the version that dropped it.
+setuptools<81
+ety==1.4.0
+httpx==0.28.1
+
+# Testing
+pytest==8.3.4

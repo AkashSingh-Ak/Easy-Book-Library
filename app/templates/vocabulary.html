@@ -1,0 +1,174 @@
+<!-- app/templates/vocabulary.html -->
+{% extends "base.html" %}
+
+{% block title %}Vocabulary Deck Manager - Easy Book Library{% endblock %}
+
+{% block content %}
+<main class="main-container" style="max-width: 1400px; padding-top: 1rem;">
+    <!-- Back to Reading Option (shown dynamically if book_id is present) -->
+    <div id="back-to-reading-container" style="display: none; margin-bottom: 1rem;">
+        <a id="back-to-reading-link" href="#" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; font-weight: 500;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            Back to Reading
+        </a>
+    </div>
+
+    <div class="vocab-grid">
+        <!-- Left Panel: Word Index & Filters -->
+        <section class="vocab-list-pane">
+            <h3 style="margin-bottom: 0.25rem;">My Vocabulary</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem;">Words you highlight or double-click are automatically logged here.</p>
+            
+            <div class="search-input-group" style="min-width: unset; width: 100%;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted); margin-right: 0.5rem;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" id="vocab-search" placeholder="Search word, meaning, notes..." oninput="loadVocabDeck()">
+            </div>
+            
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <select id="vocab-filter-status" class="filter-select" style="flex: 1; padding: 0.35rem 0.75rem; font-size: 0.8rem;" onchange="loadVocabDeck()">
+                    <option value="">All Statuses</option>
+                    <option value="Learning">Learning</option>
+                    <option value="Review Later">Review Later</option>
+                    <option value="Known">Known</option>
+                    <option value="Mastered">Mastered</option>
+                </select>
+                
+                <select id="vocab-sort-by" class="filter-select" style="flex: 1; padding: 0.35rem 0.75rem; font-size: 0.8rem;" onchange="loadVocabDeck()">
+                    <option value="date_desc">Newest Added</option>
+                    <option value="date_asc">Oldest Added</option>
+                    <option value="alphabetical">Word (A-Z)</option>
+                    <option value="views_desc">Most Viewed</option>
+                </select>
+            </div>
+
+            <div id="vocab-deck-container" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
+                <!-- Word list populated via JS -->
+            </div>
+        </section>
+
+        <!-- Right Panel: Word Details Profile -->
+        <section id="vocab-details-pane" class="vocab-detail-pane">
+            <!-- Initial Empty State -->
+            <div id="vocab-empty-state" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); text-align: center; gap: 1rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                <h3>Select a word to view details</h3>
+                <p>Explore etymologies, prefix/suffix morphology, synonyms, antonyms, CEFR difficulty level, and write custom study notes.</p>
+            </div>
+
+            <!-- Detailed Content Card (initially hidden) -->
+            <div id="vocab-details-content" style="display: none; flex-direction: column; gap: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+                    <div>
+                        <h1 id="detail-word" style="font-size: 2.2rem; font-family: var(--font-heading); font-weight: 700; color: var(--accent-color); margin-bottom: 0.25rem;">unbelievable</h1>
+                        <h2 id="detail-word-hindi" style="font-size: 1.5rem; font-family: var(--font-heading); font-weight: 600; color: var(--text-secondary); margin-top: -0.25rem; margin-bottom: 0.5rem; display: none;"></h2>
+                        <div style="display: flex; gap: 0.75rem; align-items: center;">
+                            <span id="detail-ipa" style="font-family: monospace; color: var(--text-secondary);">/ˌʌnbɪˈliːvəbl/</span>
+                            <span id="detail-pos" style="font-size: 0.85rem; font-style: italic; color: var(--text-muted);">adjective</span>
+                            <span id="detail-cefr" class="dict-cefr" style="font-size: 0.8rem; padding: 0.15rem 0.5rem;">B2</span>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;">
+                        <!-- Status Edit -->
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label style="font-size: 0.85rem; font-weight: 500;">Status:</label>
+                            <select id="detail-status" class="filter-select" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;" onchange="updateWordStatus()">
+                                <option value="Learning">Learning</option>
+                                <option value="Review Later">Review Later</option>
+                                <option value="Known">Known</option>
+                                <option value="Mastered">Mastered</option>
+                            </select>
+                        </div>
+                        <span id="detail-views" style="font-size: 0.8rem; color: var(--text-muted);">Times viewed: 5</span>
+                    </div>
+                </div>
+
+                <!-- Dictionary Definitions -->
+                <div>
+                    <h3 style="font-family: var(--font-heading); margin-bottom: 0.5rem;">Definitions</h3>
+                    <ol id="detail-definitions" style="padding-left: 1.25rem; font-size: 0.95rem; line-height: 1.5; color: var(--text-secondary);">
+                        <!-- Loaded dynamically -->
+                    </ol>
+                </div>
+
+                <!-- Word Structure / Morphology Analysis -->
+                <div style="background: rgba(0, 0, 0, 0.1); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+                    <h3 style="font-family: var(--font-heading); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                        🧬 Word Structure Decomposition
+                    </h3>
+                    <div class="morph-flow">
+                        <div id="detail-prefix" class="morph-item">
+                            <span class="morph-label">Prefix:</span>
+                            <span class="morph-text">un- (meaning: not, opposite of)</span>
+                        </div>
+                        <div id="detail-root" class="morph-item">
+                            <span class="morph-label">Root:</span>
+                            <span class="morph-text">believe (meaning: accept as true) [Latin root 'cred' / English base]</span>
+                        </div>
+                        <div id="detail-suffix" class="morph-item">
+                            <span class="morph-label">Suffix:</span>
+                            <span class="morph-text">-able (meaning: capable of being, fit for)</span>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 1rem;">
+                        <h4 style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Related Word Family:</h4>
+                        <div id="detail-related" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <!-- related family tags -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Etymology & Tree -->
+                <div>
+                    <h3 style="font-family: var(--font-heading); margin-bottom: 0.5rem;">Etymology & Historical Evolution</h3>
+                    <p id="detail-etymology" style="font-size: 0.95rem; line-height: 1.5; color: var(--text-secondary); margin-bottom: 0.75rem;">Derived from Middle English...</p>
+                    <div id="detail-etymology-tree" class="etymology-tree-container">
+                        <!-- Unicode layout Tree -->
+                    </div>
+                </div>
+
+                <!-- Synonyms & Antonyms Split -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <div>
+                        <h3 style="font-family: var(--font-heading); margin-bottom: 0.5rem; color: #10b981;">Synonyms</h3>
+                        <div id="detail-synonyms" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            <!-- Loaded via tag tags -->
+                        </div>
+                    </div>
+                    <div>
+                        <h3 style="font-family: var(--font-heading); margin-bottom: 0.5rem; color: #ef4444;">Antonyms</h3>
+                        <div id="detail-antonyms" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            <!-- Loaded via tags -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Study Notes -->
+                <div style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                    <h3 style="font-family: var(--font-heading);">My Study Notes</h3>
+                    <textarea id="detail-notes" rows="4" placeholder="Write custom notes here. E.g., memory hooks, mnemonics, or translations..." style="width: 100%; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); padding: 0.75rem; font-family: var(--font-sans); outline: none; line-height: 1.4; resize: vertical;" onchange="saveWordNotes()"></textarea>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                        <span id="save-status" style="font-size: 0.8rem; color: var(--text-muted);">Notes saved locally.</span>
+                        <button class="btn btn-danger" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;" onclick="deleteCurrentWord()">Delete Word</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/vocab.js?v=2"></script>
+<script>
+    // Init page load
+    document.addEventListener("DOMContentLoaded", () => {
+        loadVocabDeck();
+        if (typeof initBackToReadingOption === 'function') {
+            initBackToReadingOption();
+        }
+    });
+</script>
+{% endblock %}

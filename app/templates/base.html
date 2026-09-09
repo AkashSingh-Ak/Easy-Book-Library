@@ -1,0 +1,104 @@
+<!-- app/templates/base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Easy Book Library{% endblock %}</title>
+    <!-- CSS stylesheet link -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="theme-{{ theme or 'dark' }}">
+    <!-- Navbar Header -->
+    <header class="navbar">
+        <a href="/" class="navbar-brand">
+            <!-- Book Icon SVG -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10"/></svg>
+            <span>Easy Book Library</span>
+        </a>
+        <nav class="navbar-links">
+            <a href="/" class="nav-btn {% if request.url.path == '/' %}active{% endif %}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+                Library
+            </a>
+            <a href="/vocabulary" class="nav-btn {% if request.url.path == '/vocabulary' %}active{% endif %}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V10"/><path d="M12 14a3 3 0 1 0 3-3"/><path d="M21 3h-6v6Z"/><path d="m15 9 6-6"/></svg>
+                Vocabulary Deck
+            </a>
+            
+            <!-- Hindi Meaning Toggle: word definitions only show a Hindi translation when this is on -->
+            <div style="display: flex; gap: 0.25rem; border-left: 1px solid var(--border-color); padding-left: 1rem;">
+                <button id="hindi-toggle-btn" onclick="toggleHindiMeaning()" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;" title="Show Hindi meanings alongside English">🇮🇳 Hindi</button>
+            </div>
+
+            <!-- Global Theme Switcher -->
+            <div style="display: flex; gap: 0.25rem; border-left: 1px solid var(--border-color); padding-left: 1rem;">
+                <button onclick="changeTheme('light')" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;" title="Light Theme">☀️</button>
+                <button onclick="changeTheme('dark')" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;" title="Dark Theme">🌙</button>
+                <button onclick="changeTheme('sepia')" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;" title="Sepia Theme">📜</button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Page Content Container -->
+    {% block content %}{% endblock %}
+
+    <!-- Shared helpers used by every page -->
+    <script>
+        // Book titles, authors and table-of-contents entries come from files
+        // a user imports, so they must be escaped before ever being placed
+        // into innerHTML - otherwise a book with a malicious title could run
+        // arbitrary script in the library/reader view.
+        function escapeHtml(value) {
+            const div = document.createElement("div");
+            div.innerText = value == null ? "" : String(value);
+            return div.innerHTML;
+        }
+
+        function changeTheme(themeName) {
+            document.body.className = '';
+            document.body.classList.add('theme-' + themeName);
+
+            // Save preference to backend settings
+            fetch('/api/settings')
+                .then(res => res.json())
+                .then(settings => {
+                    settings.theme = themeName;
+                    return fetch('/api/settings', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(settings)
+                    });
+                })
+                .catch(err => console.error('Failed to update theme settings:', err));
+        }
+
+        // Hindi meaning toggle: a simple per-browser display preference.
+        // When off, Hindi translations are hidden everywhere words are shown.
+        function isHindiEnabled() {
+            try {
+                return localStorage.getItem('showHindiMeaning') === 'true';
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function toggleHindiMeaning() {
+            const enabled = !isHindiEnabled();
+            try {
+                localStorage.setItem('showHindiMeaning', enabled ? 'true' : 'false');
+            } catch (e) {
+                // localStorage unavailable (e.g. private browsing) - toggle just won't persist
+            }
+            location.reload();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('hindi-toggle-btn');
+            if (btn) btn.classList.toggle('active', isHindiEnabled());
+        });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>
